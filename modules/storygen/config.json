@@ -1,0 +1,6 @@
+{
+    "storygen":{
+        "api_key": "OPENAI_STORYGEN",
+        "model": "gpt-4-turbo"   
+    }
+}

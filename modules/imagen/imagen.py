@@ -12,11 +12,10 @@ with open(os.path.join(script_dir, "config.json")) as file:
     config = json.load(file)
 
 # Set up API key
-OPEN_AI_IMAGE_API = os.environ.get("OPEN_AI_IMAGE_API")
-print(f"Loaded Image API key: {OPEN_AI_IMAGE_API[:10]}")
+API_KEY = os.environ.get(config["imagen"]["api_key"])
 
 # Initialize OpenAI client
-client = OpenAI(api_key=OPEN_AI_IMAGE_API)
+client = OpenAI(api_key=API_KEY)
 
 async def generate_image_filename(prompt):
     response = client.chat.completions.create(
@@ -40,7 +39,10 @@ async def generate_image_url(prompt):
     )
     return response.data[0].url
 
-async def generate_image(prompt, save=True):
+async def generate_image(prompt, style=None, save=True):
+    print(f"Generating image for prompt: {prompt}")
+    if style:
+        prompt = f"{prompt} in the style of {style}"
     image_url = await generate_image_url(prompt)
     image = Image.open(requests.get(image_url, stream=True).raw)
     if save:
@@ -48,6 +50,25 @@ async def generate_image(prompt, save=True):
         image.save(os.path.join(script_dir, "images", filename))
     return image
 
-async def generate_images(prompts: list, save=True):
-    images = await asyncio.gather(*[generate_image(prompt, save=save) for prompt in prompts])
+async def generate_images(prompts: list, style=None, save=True):
+    images = await asyncio.gather(*[generate_image(prompt, style=style, save=save) for prompt in prompts])
     return images
+
+
+async def pages_to_prompts(pages: list):
+    prompts = []
+    for page in pages:
+        prompt = await page_to_prompt(page)
+        prompts.append(prompt)
+    return prompts
+
+
+async def page_to_prompt(page: str):
+    response = client.chat.completions.create(
+        model=config["imagen"]["page_to_prompt_model"],
+        messages=[
+            {"role": "system", "content": "convert a page of a story into a suitable image prompt"},
+            {"role": "user", "content": page},
+        ]
+    )
+    return response.choices[0].message.content

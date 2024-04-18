@@ -1,0 +1,6 @@
+{
+    "pagen":{
+        "api_key": "OPENAI_PAGEN",
+        "model": "gpt-4-turbo"   
+    }
+}
