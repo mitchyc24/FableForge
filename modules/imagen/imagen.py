@@ -2,8 +2,9 @@ import os
 import json
 import requests
 from PIL import Image
-from openai import OpenAI
+from openai import OpenAI # type: ignore
 import asyncio
+from datetime import datetime
 
 # Load configuration
 script_dir = os.path.dirname(os.path.abspath(__file__))
@@ -25,7 +26,9 @@ async def generate_image_filename(prompt):
             {"role": "user", "content": prompt},
         ]
     )
-    return response.choices[0].message.content 
+    filename = datetime.now().strftime("%Y%m%d%H%M%S_") + response.choices[0].message.content + ".png"
+    return filename
+
 
 async def generate_image_url(prompt):
     response = client.images.generate(
@@ -37,11 +40,14 @@ async def generate_image_url(prompt):
     )
     return response.data[0].url
 
-async def generate_image(prompt):
+async def generate_image(prompt, save=True):
     image_url = await generate_image_url(prompt)
     image = Image.open(requests.get(image_url, stream=True).raw)
+    if save:
+        filename = await generate_image_filename(prompt)
+        image.save(os.path.join(script_dir, "images", filename))
     return image
 
-async def generate_images(prompts: list):
-    images = await asyncio.gather(*[generate_image(prompt) for prompt in prompts])
+async def generate_images(prompts: list, save=True):
+    images = await asyncio.gather(*[generate_image(prompt, save=save) for prompt in prompts])
     return images
